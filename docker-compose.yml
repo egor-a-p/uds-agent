@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: ./
+      dockerfile: Dockerfile.server
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+  agent:
+    build:
+      context: ./
+      dockerfile: Dockerfile.agent
+    ports:
+      - "8092:8091"
+    volumes:
+      - socket_data:/tmp
+
+  client:
+    depends_on:
+      - agent
+      - server
+    build:
+      context: src/main/go/echo_client
+    volumes:
+      - socket_data:/tmp
+
+  prometheus:
+    image: prom/prometheus:latest
+    depends_on:
+      - agent
+      - server
+    ports:
+      - 9000:9090
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
+
+volumes:
+  socket_data:
+  prometheus_data:

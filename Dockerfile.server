@@ -1,0 +1,10 @@
+FROM adoptopenjdk/openjdk15:ubi
+
+WORKDIR /app
+
+ENV SOCKET_PATH=/tmp/agent.sock \
+    METRICS_PORT=8091
+
+COPY build/libs/uds-agent-1.0.0.jar ./
+
+CMD ["java", "-Dprofile=server", "-jar", "uds-agent-1.0.0.jar"]

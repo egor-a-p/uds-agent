@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: services
+    metrics_path: /prometheus
+    static_configs:
+      - targets:
+          - 'server:8091'
+          - 'agent:8091'
+
+#  rate(request_duration_seconds_sum[1m])
+#  /
+#  rate(request_duration_seconds_count[1m])

@@ -1,0 +1,111 @@
+apply plugin: 'java'
+apply plugin: "idea"
+apply plugin: 'com.google.protobuf'
+
+group 'example.uds.grpc'
+version '1.0.0'
+
+sourceCompatibility = JavaVersion.VERSION_15
+targetCompatibility = JavaVersion.VERSION_15
+
+def reactiveGrpcVersion = '1.0.1'
+def grpcVersion = '1.36.0'
+def protobufVersion = '3.15.3'
+def nettyVersion = '4.1.52.Final'
+
+repositories {
+    mavenCentral()
+}
+
+buildscript {
+    repositories {
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.15'
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'example.uds.grpc.Application'
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+assemble {
+    doLast {
+        copy {
+            from jar
+            into "${rootProject}/docker/server"
+        }
+        copy {
+            from jar
+            into "${rootProject}/docker/agent"
+        }
+        copy {
+            from jar
+            into "${rootProject}/docker/java-client"
+        }
+    }
+}
+
+dependencies {
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-netty:${grpcVersion}"
+    implementation "com.salesforce.servicelibs:reactor-grpc-stub:${reactiveGrpcVersion}"
+    implementation "io.netty:netty-all:${nettyVersion}"
+    implementation "io.netty:netty-tcnative-boringssl-static:2.0.36.Final"
+    implementation "io.projectreactor.netty:reactor-netty-core:1.0.4"
+    implementation "io.projectreactor.netty:reactor-netty-http:1.0.4"
+    implementation 'io.micrometer:micrometer-core:1.6.4'
+    implementation 'io.micrometer:micrometer-registry-prometheus:1.6.4'
+    compileOnly 'org.projectlombok:lombok:1.18.16'
+    annotationProcessor 'org.projectlombok:lombok:1.18.16'
+}
+
+protobuf {
+    protoc {
+        // The artifact spec for the Protobuf Compiler
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+    clean {
+        delete protobuf.generatedFilesBaseDir
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+        rxgrpc {
+            artifact = "com.salesforce.servicelibs:rxgrpc:${reactiveGrpcVersion}"
+        }
+        reactor {
+            artifact = "com.salesforce.servicelibs:reactor-grpc:${reactiveGrpcVersion}"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc { }
+            reactor {}
+        }
+    }
+}
+
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/grpc')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/rxgrpc')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/reactor')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/java')
+idea {
+    module {
+        generatedSourceDirs += file("build/generated/source/proto/main/grpc")
+        generatedSourceDirs += file("build/generated/source/proto/main/rxgrpc")
+        generatedSourceDirs += file("build/generated/source/proto/main/reactor")
+        generatedSourceDirs += file("build/generated/source/proto/main/java")
+    }
+}
